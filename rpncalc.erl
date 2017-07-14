@@ -36,24 +36,19 @@ calculate(Args) ->
     Result = parse(Args, []),
     Result.
 
-parse([], _Stack) -> {error, "Nothing to calculate."};
+parse([], Stack) -> {ok, Stack};
 parse([H | T], Stack) when H == 32 -> parse(T, Stack);
-parse(S, Stack) ->
-    {N, R} = string:to_integer(S),
+parse($+, [A, B]) -> A + B;
+parse($-, [A, B]) -> B - A;
+parse($*, [A, B]) -> A * B;
+parse($/, [A, B]) -> B / A;
+parse([H | T], Stack) ->
+    {N, R} = string:to_integer([H | T]),
     case N of
-      error -> exec(hd([S]), Stack);
-      _ -> parse(R, [N | Stack])
+        error ->
+            [A | A_stack_tail] = Stack,
+            [B | B_stack_tail] = A_stack_tail,
+            Result = parse(H, [A, B]),
+            parse(T, [Result | B_stack_tail]);
+        _ -> parse(R, [N | Stack])
     end.
-
-op($+, A, B) -> A + B;
-op($-, A, B) -> B - A;
-op($*, A, B) -> A * B;
-op($/, A, B) -> B / A.
-
-exec([H | T], Stack) when H == 32 -> exec(T, Stack);
-exec(_, [H]) -> {ok, H};
-exec([H_ops | T_ops], Stack) ->
-    [A | A_stack_tail] = Stack,
-    [B | B_stack_tail] = A_stack_tail,
-    Result = op(H_ops, A, B),
-    exec(T_ops, [Result | B_stack_tail]).
